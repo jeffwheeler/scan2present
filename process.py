@@ -103,6 +103,10 @@ def process(g, img):
                              [np.linalg.det(np.array([[x3, 1 ], [x4, 1]])),
                               np.linalg.det(np.array([[y3, 1 ], [y4, 1 ]]))]]))
 
+                        # Should probably validate that there is an intersection
+                        # before crashing here. It is extraordinarily unlikely,
+                        # though.
+
                         p = tuple(np.int32((px_n/p_d, py_n/p_d)))
                         if distance(m, p) < 20 and distance(n, p) < 20:
                             cv2.line(img, m, p, (0, 0, 255), 1)
