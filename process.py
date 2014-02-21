@@ -21,7 +21,27 @@ def threshold(img):
     # g = cv2.Canny(g, 50, 150, apertureSize=5)
     return g
 
-def process(g, img):
+def recognize_shapes(img, shapes):
+    for shape in shapes:
+        sides = shape['data']
+        corners = list(shape['extra'])
+
+        if len(sides) == len(corners):
+            # Recognize the shapes
+            if len(sides) == 3:
+                cv2.line(img, corners[0], corners[1], (255, 0, 0), 2)
+                cv2.line(img, corners[1], corners[2], (255, 0, 0), 2)
+                cv2.line(img, corners[0], corners[2], (255, 0, 0), 2)
+            elif len(sides) == 4:
+                cv2.line(img, corners[0], corners[1], (0, 255, 0), 2)
+                cv2.line(img, corners[0], corners[2], (0, 255, 0), 2)
+                cv2.line(img, corners[0], corners[3], (0, 255, 0), 2)
+                cv2.line(img, corners[1], corners[2], (0, 255, 0), 2)
+                cv2.line(img, corners[1], corners[3], (0, 255, 0), 2)
+                cv2.line(img, corners[2], corners[3], (0, 255, 0), 2)
+
+
+def process(img, g):
     gf = np.float32(g)
 
     corners = np.zeros_like(g)
@@ -118,23 +138,7 @@ def process(g, img):
                             cv2.line(img, n, p, (0, 0, 255), 1)
                             shapes.add((a, b), (c, d), extra=p)
 
-    for shape in shapes:
-        sides = shape['data']
-        corners = list(shape['extra'])
-
-        if len(sides) == len(corners):
-            # Recognize the shapes
-            if len(sides) == 3:
-                cv2.line(img, corners[0], corners[1], (255, 0, 0), 2)
-                cv2.line(img, corners[1], corners[2], (255, 0, 0), 2)
-                cv2.line(img, corners[0], corners[2], (255, 0, 0), 2)
-            elif len(sides) == 4:
-                cv2.line(img, corners[0], corners[1], (0, 255, 0), 2)
-                cv2.line(img, corners[0], corners[2], (0, 255, 0), 2)
-                cv2.line(img, corners[0], corners[3], (0, 255, 0), 2)
-                cv2.line(img, corners[1], corners[2], (0, 255, 0), 2)
-                cv2.line(img, corners[1], corners[3], (0, 255, 0), 2)
-                cv2.line(img, corners[2], corners[3], (0, 255, 0), 2)
+    recognize_shapes(img, shapes)
 
     return img
 
@@ -143,7 +147,7 @@ def test_img(filename):
 
     img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
     thresh = threshold(img)
-    img = process(thresh, img)
+    img = process(img, thresh)
 
     cv2.imshow(filename, img)
     cv2.waitKey(0)
