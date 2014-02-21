@@ -2,6 +2,8 @@ import cv2
 import itertools
 import numpy as np
 
+from grouplist import GroupList
+
 def distance(a, b):
     (ax, ay) = a
     (bx, by) = b
@@ -32,6 +34,7 @@ def process(g, img):
     cv2.imshow('corners', corners)
 
     line_endpoints = []
+    shapes = GroupList()
 
     contours, hierarchy = cv2.findContours(g, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     for c in contours:
@@ -67,9 +70,11 @@ def process(g, img):
 
                     # cv2.line(img, leftmost, rightmost, (0, 255, 255), 1)
             else:
+                # Small objects
                 # cv2.drawContours(img, c, -1, (255, 0, 0), 1)
                 pass
         else:
+            # Circles
             # cv2.drawContours(img, c, -1, (0, 255, 0), 1)
             pass
 
@@ -111,6 +116,25 @@ def process(g, img):
                         if distance(m, p) < 20 and distance(n, p) < 20:
                             cv2.line(img, m, p, (0, 0, 255), 1)
                             cv2.line(img, n, p, (0, 0, 255), 1)
+                            shapes.add((a, b), (c, d), extra=p)
+
+    for shape in shapes:
+        sides = shape['data']
+        corners = list(shape['extra'])
+
+        if len(sides) == len(corners):
+            # Recognize the shapes
+            if len(sides) == 3:
+                cv2.line(img, corners[0], corners[1], (255, 0, 0), 2)
+                cv2.line(img, corners[1], corners[2], (255, 0, 0), 2)
+                cv2.line(img, corners[0], corners[2], (255, 0, 0), 2)
+            elif len(sides) == 4:
+                cv2.line(img, corners[0], corners[1], (0, 255, 0), 2)
+                cv2.line(img, corners[0], corners[2], (0, 255, 0), 2)
+                cv2.line(img, corners[0], corners[3], (0, 255, 0), 2)
+                cv2.line(img, corners[1], corners[2], (0, 255, 0), 2)
+                cv2.line(img, corners[1], corners[3], (0, 255, 0), 2)
+                cv2.line(img, corners[2], corners[3], (0, 255, 0), 2)
 
     return img
 
