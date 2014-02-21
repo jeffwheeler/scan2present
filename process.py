@@ -31,7 +31,7 @@ def threshold_shape_sizes(shapes):
                 shapes.remove(list(shape['data'])[0])
                 break
 
-def recognize_shapes(img, shapes):
+def recognize_linear_shapes(img, shapes):
     threshold_shape_sizes(shapes)
     for shape in shapes:
         sides = shape['data']
@@ -60,7 +60,7 @@ def process(img, g):
     g[dst>0.05*dst.max()]=0
 
     line_endpoints = []
-    shapes = GroupList()
+    linear_shapes = GroupList()
 
     contours, hierarchy = cv2.findContours(g, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for c in contours:
@@ -146,9 +146,9 @@ def process(img, g):
                         if distance(m, p) < 20 and distance(n, p) < 20:
                             cv2.line(img, m, p, (0, 0, 255), 1)
                             cv2.line(img, n, p, (0, 0, 255), 1)
-                            shapes.add((a, b), (c, d), extra=p)
+                            linear_shapes.add((a, b), (c, d), extra=p)
 
-    recognize_shapes(img, shapes)
+    recognize_linear_shapes(img, linear_shapes)
 
     return img
 
