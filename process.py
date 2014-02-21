@@ -21,7 +21,18 @@ def threshold(img):
     # g = cv2.Canny(g, 50, 150, apertureSize=5)
     return g
 
+def threshold_shape_sizes(shapes):
+    # Detect if any corners are within a few pixels of each other. If so,
+    # we've screwed up somewhere.
+    for shape in shapes:
+        corners = shape['extra']
+        for (c1, c2) in itertools.combinations(corners, 2):
+            if distance(c1, c2) < 10:
+                shapes.remove(list(shape['data'])[0])
+                break
+
 def recognize_shapes(img, shapes):
+    threshold_shape_sizes(shapes)
     for shape in shapes:
         sides = shape['data']
         corners = list(shape['extra'])

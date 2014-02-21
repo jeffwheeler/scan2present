@@ -22,6 +22,11 @@ class GroupList:
                 e = set([])
             self.c.append({'data': set([a, b]), 'extra': e})
 
+    def remove(self, a):
+        for i, x in enumerate(self.c):
+            if a in x['data']:
+                del self.c[i]
+
     def __iter__(self):
         return iter(self.c)
 
