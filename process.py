@@ -14,20 +14,24 @@ def threshold(img):
 
 def process(g, img):
     gf = np.float32(g)
-    dst = cv2.cornerHarris(gf,7,21,0.04)
+    dst = cv2.cornerHarris(gf,7,15,0.04)
     dst = cv2.dilate(dst,None)
     g[dst>0.05*dst.max()]=0
 
-    # cont = cv2.
     contours, hierarchy = cv2.findContours(g, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     for c in contours:
         if cv2.contourArea(c) > 50:
             ellipse = cv2.fitEllipse(c)
-            axes = ellipse[1]
-            ecc = max(axes)/min(axes)
-            print ecc
+
+            (x,y), (minor_axis, major_axis), angle = ellipse
+            ecc = major_axis/minor_axis
+
+            print angle
             if ecc > 5:
-                cv2.drawContours(img, c, -1, (0, 0, 255), 1)
+                if abs(angle-90) > 30:
+                    cv2.drawContours(img, c, -1, (0, 0, 255), 1)
+                else:
+                    cv2.drawContours(img, c, -1, (0, 255, 255), 1)
             else:
                 cv2.drawContours(img, c, -1, (255, 0, 0), 1)
         else:
@@ -35,16 +39,19 @@ def process(g, img):
 
     return img
 
-if __name__ == '__main__':
-    img = cv2.imread('input-images/slides/slide1.jpg')
+def test_img(filename):
+    img = cv2.imread(filename)
     # img = cv2.imread('input-images/training/square.jpg')
 
     img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
     thresh = threshold(img)
     img = process(thresh, img)
 
-    cv2.imwrite('result.jpg', img)
-
-    cv2.imshow('image', img)
+    cv2.imshow(filename, img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    test_img('input-images/training/square.jpg')
+    test_img('input-images/slides/slide1.jpg')
+    test_img('input-images/slides/slide11.jpg')
