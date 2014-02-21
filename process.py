@@ -55,19 +55,14 @@ def recognize_shapes(img, shapes):
 def process(img, g):
     gf = np.float32(g)
 
-    corners = np.zeros_like(g)
-
     dst = cv2.cornerHarris(gf,7,15,0.04)
     dst = cv2.dilate(dst,None)
     g[dst>0.05*dst.max()]=0
-    corners[dst>0.05*dst.max()] = 255
-
-    cv2.imshow('corners', corners)
 
     line_endpoints = []
     shapes = GroupList()
 
-    contours, hierarchy = cv2.findContours(g, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(g, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for c in contours:
         if cv2.contourArea(c) > 50:
             ellipse = cv2.fitEllipse(c)
@@ -100,12 +95,16 @@ def process(img, g):
                     line_endpoints.append((leftmost, rightmost))
 
                     # cv2.line(img, leftmost, rightmost, (0, 255, 255), 1)
-            else:
-                # Small objects
+            elif ecc < 1.5: # Need to draw pretty carefully to not pass 1.5
+                # Circles
                 # cv2.drawContours(img, c, -1, (255, 0, 0), 1)
+                cv2.ellipse(img, ellipse, (0, 255, 255), 2)
+            else:
+                # Some weird line shape
+                # cv2.drawContours(img, c, -1, (0, 255, 0), 1)
                 pass
         else:
-            # Circles
+            # Small objects
             # cv2.drawContours(img, c, -1, (0, 255, 0), 1)
             pass
 
