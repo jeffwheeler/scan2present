@@ -3,6 +3,7 @@ import itertools
 import numpy as np
 
 from grouplist import GroupList
+from shape import ShapeList
 
 def distance(a, b):
     (ax, ay) = a
@@ -25,32 +26,34 @@ def threshold_shape_sizes(shapes):
     # Detect if any corners are within a few pixels of each other. If so,
     # we've screwed up somewhere.
     for shape in shapes:
-        corners = shape['extra']
-        for (c1, c2) in itertools.combinations(corners, 2):
-            if distance(c1, c2) < 10:
-                shapes.remove(list(shape['data'])[0])
+        for v1, v2 in itertools.combinations(shape.get_vertices(), 2):
+            if distance(v1, v2) < 10:
+                shapes.delete_shape_with_vertex(v1)
                 break
+
+def order_shapes(img, shapes):
+    pass
+
+def find_largest_container(img, shapes):
+    sizes = []
+    for i, shape in enumerate(shapes):
+        if len(shape['extra']) == 4:
+            # Detect area
+            pass
 
 def recognize_linear_shapes(img, shapes):
     threshold_shape_sizes(shapes)
     for shape in shapes:
-        sides = shape['data']
-        corners = list(shape['extra'])
-
-        if len(sides) == len(corners):
+        if shape.is_complete():
             # Recognize the shapes
-            if len(sides) == 3:
-                cv2.line(img, corners[0], corners[1], (255, 0, 0), 2)
-                cv2.line(img, corners[1], corners[2], (255, 0, 0), 2)
-                cv2.line(img, corners[0], corners[2], (255, 0, 0), 2)
-            elif len(sides) == 4:
-                cv2.line(img, corners[0], corners[1], (0, 255, 0), 2)
-                cv2.line(img, corners[0], corners[2], (0, 255, 0), 2)
-                cv2.line(img, corners[0], corners[3], (0, 255, 0), 2)
-                cv2.line(img, corners[1], corners[2], (0, 255, 0), 2)
-                cv2.line(img, corners[1], corners[3], (0, 255, 0), 2)
-                cv2.line(img, corners[2], corners[3], (0, 255, 0), 2)
+            if len(shape) == 3:
+                color = (255, 0, 0)
+            elif len(shape) == 4:
+                color = (0, 255, 0)
 
+            # Connect all the points
+            for v1, v2 in itertools.combinations(shape.get_vertices(), 2):
+                cv2.line(img, v1, v2, color, 2)
 
 def process(img, g):
     gf = np.float32(g)
@@ -60,7 +63,6 @@ def process(img, g):
     g[dst>0.05*dst.max()]=0
 
     line_endpoints = []
-    linear_shapes = GroupList()
 
     contours, hierarchy = cv2.findContours(g, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for c in contours:
@@ -108,6 +110,8 @@ def process(img, g):
             # cv2.drawContours(img, c, -1, (0, 255, 0), 1)
             pass
 
+    linear_shapes = ShapeList()
+
     for (a, b) in line_endpoints:
         cv2.line(img, a, b, (255, 255, 0), 1)
         for (c, d) in line_endpoints:
@@ -146,7 +150,8 @@ def process(img, g):
                         if distance(m, p) < 20 and distance(n, p) < 20:
                             cv2.line(img, m, p, (0, 0, 255), 1)
                             cv2.line(img, n, p, (0, 0, 255), 1)
-                            linear_shapes.add((a, b), (c, d), extra=p)
+                            # linear_shapes.add((a, b), (c, d), extra=p)
+                            linear_shapes.add((a, b), (c, d), p)
 
     recognize_linear_shapes(img, linear_shapes)
 
