@@ -28,7 +28,7 @@ class Shape:
         (c, d) = (self.c[0][1][1], self.c[-1][1][1])
 
         # Must have more than two corners and two of the four line segments at
-        # corner nodes must be the same (i.e. 3 unique line segments among
+        # end corner nodes must be the same (i.e. 3 unique line segments among
         # them).
         s = set(map(tuple, [a, b, c, d]))
         return len(self.c) > 2 and len(s) == 3
