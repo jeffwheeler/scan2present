@@ -51,9 +51,12 @@ def recognize_linear_shapes(img, shapes):
             elif len(shape) == 4:
                 color = (0, 255, 0)
 
-            # Connect all the points
-            for v1, v2 in itertools.combinations(shape.get_vertices(), 2):
-                cv2.line(img, v1, v2, color, 2)
+            # Add the first vertex to the end, so I can iterate over
+            # consecutive pairs and nicely get the ordered shape
+            vs = shape.get_vertices()
+            for i, v in enumerate(vs):
+                cv2.line(img, v, vs[(i+1)%len(vs)], color, 2)
+                color = (color[0], color[1], color[2] + np.uint8(255./(len(shape)-1)))
 
 def process(img, g):
     gf = np.float32(g)
