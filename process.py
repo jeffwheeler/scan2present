@@ -49,6 +49,8 @@ def recognize_linear_shapes(img, shapes):
                 color = (255, 0, 0)
             elif len(shape) == 4:
                 color = (0, 255, 0)
+            elif len(shape) > 4:
+                color = (255, 255, 0)
 
             # Add the first vertex to the end, so I can iterate over
             # consecutive pairs and nicely get the ordered shape
@@ -62,13 +64,15 @@ def process(img, g):
 
     dst = cv2.cornerHarris(gf,7,15,0.04)
     dst = cv2.dilate(dst,None)
-    g[dst>0.05*dst.max()]=0
+    g[dst>0.02*dst.max()]=0
 
     line_endpoints = []
 
+    x = 0
+
     contours, hierarchy = cv2.findContours(g, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for c in contours:
-        if cv2.contourArea(c) > 50:
+        if cv2.contourArea(c) > 100:
             ellipse = cv2.fitEllipse(c)
 
             (x,y), (minor_axis, major_axis), angle = ellipse
@@ -105,11 +109,12 @@ def process(img, g):
                 cv2.ellipse(img, ellipse, (0, 255, 255), 2)
             else:
                 # Some weird line shape
-                # cv2.drawContours(img, c, -1, (0, 255, 0), 1)
+                cv2.drawContours(img, c, -1, (255, 0, x), 2)
+                x += 125
                 pass
         else:
             # Small objects
-            # cv2.drawContours(img, c, -1, (0, 255, 0), 1)
+            cv2.drawContours(img, c, -1, (0, 255, 0), 1)
             pass
 
     linear_shapes = ShapeList()
@@ -145,8 +150,8 @@ def process(img, g):
                               np.linalg.det(np.array([[y3, 1 ], [y4, 1 ]]))]]))
 
                         # Should probably validate that there is an intersection
-                        # before crashing here. It is extraordinarily unlikely,
-                        # though.
+                        # before crashing here by division with zero. It is
+                        # extraordinarily unlikely, though.
 
                         p = tuple(np.int32((px_n/p_d, py_n/p_d)))
                         if distance(m, p) < 20 and distance(n, p) < 20:
@@ -164,6 +169,7 @@ def test_img(filename):
 
     img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
     thresh = threshold(img)
+
     img = process(img, thresh)
 
     cv2.imshow(filename, img)
@@ -173,13 +179,15 @@ def test_img(filename):
 if __name__ == '__main__':
     test_img('input-images/training/square.jpg')
     test_img('input-images/slides/slide1.jpg')
-    # test_img('input-images/slides/slide2.jpg')
-    # test_img('input-images/slides/slide3.jpg')
-    # test_img('input-images/slides/slide4.jpg')
-    # test_img('input-images/slides/slide5.jpg')
-    # test_img('input-images/slides/slide6.jpg')
+    test_img('input-images/slides/slide2.jpg')
+    test_img('input-images/slides/slide3.jpg')
+    test_img('input-images/slides/slide4.jpg')
+    test_img('input-images/slides/slide5.jpg')
+    test_img('input-images/slides/slide6.jpg')
     test_img('input-images/slides/slide7.jpg')
-    # test_img('input-images/slides/slide8.jpg')
-    # test_img('input-images/slides/slide9.jpg')
-    # test_img('input-images/slides/slide10.jpg')
+    test_img('input-images/slides/slide8.jpg')
+    test_img('input-images/slides/slide9.jpg')
+    test_img('input-images/slides/slide10.jpg')
     test_img('input-images/slides/slide11.jpg')
+    test_img('input-images/slides/slide12.jpg') # Need help on thresholding
+    test_img('input-images/slides/slide13.jpg')
