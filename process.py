@@ -2,7 +2,6 @@ import cv2
 import itertools
 import numpy as np
 
-from grouplist import GroupList
 from shape import ShapeList
 
 def distance(a, b):
