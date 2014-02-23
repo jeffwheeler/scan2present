@@ -12,8 +12,8 @@ def distance(a, b):
 
 def threshold(img):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    thresh = 255-cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        thresholdType=cv2.THRESH_BINARY, blockSize=151, C=50)
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        thresholdType=cv2.THRESH_BINARY_INV, blockSize=151, C=50)
 
     k5 = np.ones((5,5),np.uint8)
     k7 = np.ones((7,7),np.uint8)
