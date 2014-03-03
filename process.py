@@ -4,6 +4,13 @@ import numpy as np
 
 from shape import ShapeList
 
+#The amount of dilation of the shapes
+th=7
+BS=151
+BSHD=15
+kHD=0.13
+DSTCONNECT=30
+
 def distance(a, b):
     (ax, ay) = a
     (bx, by) = b
@@ -12,13 +19,21 @@ def distance(a, b):
 
 def threshold(img):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    cv2.imshow('Grayscale', gray)
     thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        thresholdType=cv2.THRESH_BINARY_INV, blockSize=151, C=50)
-
+        thresholdType=cv2.THRESH_BINARY_INV, blockSize=BS, C=25)
+    # _, thresh = cv2.threshold(gray, 130,255, cv2.THRESH_BINARY_INV)
+    k3 = np.ones((3,3),np.uint8)
     k5 = np.ones((5,5),np.uint8)
     k7 = np.ones((7,7),np.uint8)
-    g = cv2.erode(cv2.dilate(thresh, k7, iterations=1), k5, iterations=1)
+    kthl = np.ones((th-2,th-2),np.uint8)
+    kth= np.ones((th,th),np.uint8)
+    g = cv2.erode(cv2.dilate(thresh, kth, iterations=1), kthl, iterations=1)
     # g = cv2.Canny(g, 50, 150, apertureSize=5)
+
+    cv2.imshow('Muneeb is cool', g)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     return g
 
 def threshold_shape_sizes(shapes):
@@ -35,12 +50,26 @@ def order_shapes(img, shapes):
 
 def find_largest_container(img, shapes):
     sizes = []
-    for i, shape in enumerate(shapes):
-        if len(shape['extra']) == 4:
-            # Detect area
-            pass
+    maxarea = 0
+    maxareashape = None
+    for shape in shapes:
+        if len(shape) == 4:
+            vertices=shape.get_vertices()
+            ## calculate area now ... wohooo
+            print vertices
+            
+            area = abs(vertices[0][0]*vertices[1][1] - vertices[0][1]*vertices[1][0]
+                   + vertices[1][0]*vertices[2][1] - vertices[1][1]*vertices[2][0]
+                   + vertices[2][0]*vertices[3][1] - vertices[2][1]*vertices[3][0]
+                   + vertices[3][0]*vertices[0][1] - vertices[3][1]*vertices[0][0])
+            print area
+            if area > maxarea:
+                maxarea = area
+                maxareashape = shape
+    return maxareashape
 
 def recognize_linear_shapes(img, shapes):
+    largest = find_largest_container(img, shapes)
     threshold_shape_sizes(shapes)
     for shape in shapes:
         if shape.is_complete():
@@ -59,13 +88,23 @@ def recognize_linear_shapes(img, shapes):
                 cv2.line(img, v, vs[(i+1)%len(vs)], color, 2)
                 color = (color[0], color[1], color[2] + np.uint8(255./(len(shape)-1)))
 
+    color = (0, 0, 255)          
+    # Draw the biggest quadrilateral
+    vs = largest.get_vertices()
+    print vs
+    for i, v in enumerate(vs):
+        cv2.line(img, v, vs[(i+1)%len(vs)], color, 2)
+
 def process(img, g):
     gf = np.float32(g)
-
-    dst = cv2.cornerHarris(gf,7,15,0.04)
+    
+    dst = cv2.cornerHarris(gf,th+8,BSHD,kHD)
+    cv2.imshow('corner',dst)
     dst = cv2.dilate(dst,None)
-    g[dst>0.02*dst.max()]=0
 
+    g[dst>0.02*dst.min()]=0
+    
+    # cv2.imshow('Coolness', g)
     line_endpoints = []
 
     x = 0
@@ -109,12 +148,12 @@ def process(img, g):
                 cv2.ellipse(img, ellipse, (0, 255, 255), 2)
             else:
                 # Some weird line shape
-                cv2.drawContours(img, c, -1, (255, 0, x), 2)
+                #cv2.drawContours(img, c, -1, (255, 0, x), 2)
                 x += 125
                 pass
         else:
             # Small objects
-            cv2.drawContours(img, c, -1, (0, 255, 0), 1)
+            # cv2.drawContours(img, c, -1, (0, 255, 0), 1)
             pass
 
     linear_shapes = ShapeList()
@@ -124,7 +163,7 @@ def process(img, g):
         for (c, d) in line_endpoints:
             if (a, b) != (c, d):
                 for (m, n) in itertools.combinations([a, b, c, d], 2):
-                    if distance(m, n) < 20:
+                    if distance(m, n) < DSTCONNECT:
                         # Likely found two line segments that should connect
                         
                         (x1, y1) = np.float32(a)
@@ -154,7 +193,7 @@ def process(img, g):
                         # extraordinarily unlikely, though.
 
                         p = tuple(np.int32((px_n/p_d, py_n/p_d)))
-                        if distance(m, p) < 20 and distance(n, p) < 20:
+                        if distance(m, p) < DSTCONNECT and distance(n, p) < DSTCONNECT:
                             cv2.line(img, m, p, (0, 0, 255), 1)
                             cv2.line(img, n, p, (0, 0, 255), 1)
                             # linear_shapes.add((a, b), (c, d), extra=p)
@@ -166,11 +205,10 @@ def process(img, g):
 
 def test_img(filename):
     img = cv2.imread(filename)
-
     img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
     thresh = threshold(img)
 
-    img = process(img, thresh)
+    process(img, thresh)
 
     cv2.imshow(filename, img)
     cv2.waitKey(0)
