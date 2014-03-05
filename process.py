@@ -19,7 +19,6 @@ def distance(a, b):
 
 def threshold(img):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    cv2.imshow('Grayscale', gray)
     thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         thresholdType=cv2.THRESH_BINARY_INV, blockSize=BS, C=25)
     # _, thresh = cv2.threshold(gray, 130,255, cv2.THRESH_BINARY_INV)
@@ -31,9 +30,6 @@ def threshold(img):
     g = cv2.erode(cv2.dilate(thresh, kth, iterations=1), kthl, iterations=1)
     # g = cv2.Canny(g, 50, 150, apertureSize=5)
 
-    cv2.imshow('Muneeb is cool', g)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
     return g
 
 def threshold_shape_sizes(shapes):
@@ -55,14 +51,14 @@ def find_largest_container(img, shapes):
     for shape in shapes:
         if len(shape) == 4:
             vertices=shape.get_vertices()
-            ## calculate area now ... wohooo
-            print vertices
+            # calculate area now ... wohooo
+            # print vertices
             
             area = abs(vertices[0][0]*vertices[1][1] - vertices[0][1]*vertices[1][0]
                    + vertices[1][0]*vertices[2][1] - vertices[1][1]*vertices[2][0]
                    + vertices[2][0]*vertices[3][1] - vertices[2][1]*vertices[3][0]
                    + vertices[3][0]*vertices[0][1] - vertices[3][1]*vertices[0][0])
-            print area
+            # print area
             if area > maxarea:
                 maxarea = area
                 maxareashape = shape
@@ -88,23 +84,22 @@ def recognize_linear_shapes(img, shapes):
                 cv2.line(img, v, vs[(i+1)%len(vs)], color, 2)
                 color = (color[0], color[1], color[2] + np.uint8(255./(len(shape)-1)))
 
-    color = (0, 0, 255)          
+    color = (0, 0, 255)
     # Draw the biggest quadrilateral
-    vs = largest.get_vertices()
-    print vs
-    for i, v in enumerate(vs):
-        cv2.line(img, v, vs[(i+1)%len(vs)], color, 2)
+    if largest:
+        vs = largest.get_vertices()
+        # print vs
+        for i, v in enumerate(vs):
+            cv2.line(img, v, vs[(i+1)%len(vs)], color, 2)
 
 def process(img, g):
     gf = np.float32(g)
     
     dst = cv2.cornerHarris(gf,th+8,BSHD,kHD)
-    cv2.imshow('corner',dst)
     dst = cv2.dilate(dst,None)
 
     g[dst>0.02*dst.min()]=0
     
-    # cv2.imshow('Coolness', g)
     line_endpoints = []
 
     x = 0
@@ -202,6 +197,16 @@ def process(img, g):
     recognize_linear_shapes(img, linear_shapes)
 
     return img
+
+def prepare_img(input_path, output_path):
+    img = cv2.imread(input_path)
+    img = np.rot90(img, 3)
+
+    img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
+    thresh = threshold(img)
+
+    img = process(img, thresh)
+    cv2.imwrite(output_path, img)
 
 def test_img(filename):
     img = cv2.imread(filename)
