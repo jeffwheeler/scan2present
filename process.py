@@ -197,6 +197,7 @@ def process(img, g):
     #Homography work
     recognize_linear_shapes(img, linear_shapes)
 
+
     rectify_shapes(img, linear_shapes)
     
     return img
@@ -207,18 +208,82 @@ def rectify_shapes(img, shapes):
     if not largest:
         return None
     print largest.get_vertices()
-    (x0, y0) = largest.get_vertices()[0]
-    (x1, y1) = largest.get_vertices()[1]
-    (x2, y2) = largest.get_vertices()[2]
-    (x3, y3) = largest.get_vertices()[3]
+# Read the vertices
+    (A2, B2) = largest.get_vertices()[0]
+    (A1, B1) = largest.get_vertices()[1]
+    (A0, B0) = largest.get_vertices()[2]
+    (A3, B3) = largest.get_vertices()[3]
+# Arrange the vertices in top-left, bottom-left, bottom-right, top-right order
+    Dist0=A0*A0+B0*B0
+    Dist1=A1*A1+B1*B1
+    Dist2=A2*A2+B2*B2
+    Dist3=A3*A3+B3*B3
+
+    minDist = 100000
+    maxDist = 0
+    
+# Re-arranges the rectangle in required order
+
+#   Set top-left
+    if Dist0 < minDist:
+        (x0, y0) = (A0, B0)
+        minDist = Dist0
+    if Dist1 < minDist:
+        (x0, y0) = (A1, B1)
+        minDist = Dist1
+    if Dist2 < minDist:
+        (x0, y0) = (A2, B2)
+        minDist = Dist2
+    if Dist3 < minDist:
+        (x0, y0) = (A3, B3)
+        minDist = Dist3
+
+#   Set bottom-right
+    if Dist0 > maxDist:
+        (x2, y2) = (A0, B0)
+        maxDist = Dist0
+    if Dist1 > maxDist:
+        (x2, y2) = (A1, B1)
+        maxDist = Dist1
+    if Dist2 > maxDist:
+        (x2, y2) = (A2, B2)
+        maxDist = Dist2
+    if Dist3 > maxDist:
+        (x2, y2) = (A3, B3)
+        maxDist = Dist3
+        
+#   Set bottom-left
+    if B0>y0 and A0<x2:
+        (x1, y1) = (A0, B0)  
+    if B1>y0 and A1<x2:
+        (x1, y1) = (A1, B1)
+    if B2>y0 and A2<x2:
+        (x1, y1) = (A2, B2)
+    if B3>y0 and A3<x2:
+        (x1, y1) = (A3, B3)
+
+#   Set top-right
+    if A0>x0 and B0<y2:
+        (x3, y3) = (A0, B0)
+    if A1>x0 and B1<y2:
+        (x3, y3) = (A1, B1)
+    if A2>x0 and B2<y2:
+        (x3, y3) = (A2, B2)
+    if A3>x0 and B3<y2:
+        (x3, y3) = (A3, B3)
 
     k0 = k1 = k2 = k3 = 0.5
+
+#   shuffle the character
+    (xtemp, ytemp) = (x3, y3)
+    (x3, y3) = (x2, y2)
+    (x2, y2) = (xtemp, ytemp)
 
 #   Modified Transformation
     X0 = X1 = k0*x0 + k1*x1
     X2 = X3 = k2*x2 + k3*x3
-    Y0 = Y2 = k0*y0 + k3*y3
-    Y1 = Y3 = k1*y1 + k2*y2
+    Y0 = Y2 = k0*y0 + k2*y2
+    Y1 = Y3 = k1*y1 + k3*y3
 # Define the matrix as given in the paper
     R1 = [x0, y0, 1, 0, 0, 0, -X0*x0, -X0*y0]
     R2 = [0, 0, 0, x0, y0, 1, -Y0*x0, -Y0*y0]
@@ -242,13 +307,9 @@ def rectify_shapes(img, shapes):
     G = coeff[6].item()
     H = coeff[7].item()
 
-    xold = x2
-    yold = y2
-    Xnew = ( A*xold + B*yold + C ) / (G*xold + H*yold + 1)
-    Ynew = ( D*xold + E*yold + F ) / (G*xold + H*yold + 1)
-
     rectified_shapes = []
 
+#    rectified_shapes.append((1,2))
     for i, shape in enumerate(shapes):
         if shape.is_complete():
             new_shape = []
@@ -256,8 +317,13 @@ def rectify_shapes(img, shapes):
                 (xold, yold) = vertex
                 Xnew = ( A*xold + B*yold + C ) / (G*xold + H*yold + 1)
                 Ynew = ( D*xold + E*yold + F ) / (G*xold + H*yold + 1)
-                new_shape.append((Xnew, Ynew))
+                Xnorm = round((Xnew-X0)*(10/X3),3)
+                Ynorm = round((Ynew-Y0)*(8/Y3), 3)
+                new_shape.append((Xnorm,Ynorm))
             rectified_shapes.append(new_shape)
+
+
+    
     print rectified_shapes
 
 def prepare_img(input_path, output_path):
@@ -266,7 +332,7 @@ def prepare_img(input_path, output_path):
 
     img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
     thresh = threshold(img)
-
+    
     img = process(img, thresh)
     cv2.imwrite(output_path, img)
 
