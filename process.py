@@ -51,7 +51,7 @@ def find_largest_container(img, shapes):
     for shape in shapes:
         if len(shape) == 4:
             vertices=shape.get_vertices()
-            # calculate area now ... wohooo
+            # calculate area now
             # print vertices
             
             area = abs(vertices[0][0]*vertices[1][1] - vertices[0][1]*vertices[1][0]
@@ -194,9 +194,71 @@ def process(img, g):
                             # linear_shapes.add((a, b), (c, d), extra=p)
                             linear_shapes.add((a, b), (c, d), p)
 
+    #Homography work
     recognize_linear_shapes(img, linear_shapes)
 
+    rectify_shapes(img, linear_shapes)
+    
     return img
+
+def rectify_shapes(img, shapes):
+ 
+    largest=find_largest_container(img, shapes)
+    if not largest:
+        return None
+    print largest.get_vertices()
+    (x0, y0) = largest.get_vertices()[0]
+    (x1, y1) = largest.get_vertices()[1]
+    (x2, y2) = largest.get_vertices()[2]
+    (x3, y3) = largest.get_vertices()[3]
+
+    k0 = k1 = k2 = k3 = 0.5
+
+#   Modified Transformation
+    X0 = X1 = k0*x0 + k1*x1
+    X2 = X3 = k2*x2 + k3*x3
+    Y0 = Y2 = k0*y0 + k3*y3
+    Y1 = Y3 = k1*y1 + k2*y2
+# Define the matrix as given in the paper
+    R1 = [x0, y0, 1, 0, 0, 0, -X0*x0, -X0*y0]
+    R2 = [0, 0, 0, x0, y0, 1, -Y0*x0, -Y0*y0]
+    R3 = [x1, y1, 1, 0, 0, 0, -X1*x1, -X1*y1]
+    R4 = [0, 0, 0, x1, y1, 1, -Y1*x1, -Y1*y1]
+    R5 = [x2, y2, 1, 0, 0, 0, -X2*x2, -X2*y2]
+    R6 = [0, 0, 0, x2, y2, 1, -Y2*x2, -Y2*y2]
+    R7 = [x3, y3, 1, 0, 0, 0, -X3*x3, -X3*y3]
+    R8 = [0, 0, 0, x3, y3, 1, -Y3*x3, -Y3*y3]
+
+    
+    g = np.matrix([R1, R2, R3, R4, R5, R6, R7, R8])
+    v = np.matrix([[X0], [Y0], [X1], [Y1], [X2], [Y2], [X3], [Y3]])
+    coeff = g.I*v 
+    A = coeff[0].item()
+    B = coeff[1].item()
+    C = coeff[2].item()
+    D = coeff[3].item()
+    E = coeff[4].item()
+    F = coeff[5].item()
+    G = coeff[6].item()
+    H = coeff[7].item()
+
+    xold = x2
+    yold = y2
+    Xnew = ( A*xold + B*yold + C ) / (G*xold + H*yold + 1)
+    Ynew = ( D*xold + E*yold + F ) / (G*xold + H*yold + 1)
+
+    rectified_shapes = []
+
+    for i, shape in enumerate(shapes):
+        if shape.is_complete():
+            new_shape = []
+            for vertex in shape.get_vertices():
+                (xold, yold) = vertex
+                Xnew = ( A*xold + B*yold + C ) / (G*xold + H*yold + 1)
+                Ynew = ( D*xold + E*yold + F ) / (G*xold + H*yold + 1)
+                new_shape.append((Xnew, Ynew))
+            rectified_shapes.append(new_shape)
+    print rectified_shapes
 
 def prepare_img(input_path, output_path):
     img = cv2.imread(input_path)
@@ -220,17 +282,17 @@ def test_img(filename):
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    test_img('input-images/training/square.jpg')
-    test_img('input-images/slides/slide1.jpg')
-    test_img('input-images/slides/slide2.jpg')
-    test_img('input-images/slides/slide3.jpg')
-    test_img('input-images/slides/slide4.jpg')
-    test_img('input-images/slides/slide5.jpg')
-    test_img('input-images/slides/slide6.jpg')
-    test_img('input-images/slides/slide7.jpg')
-    test_img('input-images/slides/slide8.jpg')
-    test_img('input-images/slides/slide9.jpg')
-    test_img('input-images/slides/slide10.jpg')
-    test_img('input-images/slides/slide11.jpg')
-    test_img('input-images/slides/slide12.jpg') # Need help on thresholding
+##    test_img('input-images/training/square.jpg')
+##    test_img('input-images/slides/slide1.jpg')
+##    test_img('input-images/slides/slide2.jpg')
+##    test_img('input-images/slides/slide3.jpg')
+##    test_img('input-images/slides/slide4.jpg')
+##    test_img('input-images/slides/slide5.jpg')
+##    test_img('input-images/slides/slide6.jpg')
+##    test_img('input-images/slides/slide7.jpg')
+##    test_img('input-images/slides/slide8.jpg')
+##    test_img('input-images/slides/slide9.jpg')
+##    test_img('input-images/slides/slide10.jpg')
+##    test_img('input-images/slides/slide11.jpg')
+##    test_img('input-images/slides/slide12.jpg') # Need help on thresholding
     test_img('input-images/slides/slide13.jpg')
