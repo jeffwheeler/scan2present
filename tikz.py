@@ -25,8 +25,11 @@ frame_footer = '''
 
 def build_frame(shapes):
     s = frame_header
-    # s += shapes
-    s += '\path[draw] (0,0) -- (0,2.124) -- (10,8) -- cycle;'
+    # s += '\path[draw] (0,0) -- (0,2.124) -- (10,8) -- cycle;'
+    for shape in shapes:
+        s += '\\path[draw] '
+        s += ' -- '.join(['(%f, %f)' % v for v in shape])
+        s += ' -- cycle;\n'
     s += frame_footer
 
     return s
@@ -40,7 +43,10 @@ def build_tex(slides):
     return s
 
 def build_pdf(slides):
+    print slides
+
     s = build_tex(slides)
+    print s
 
     tikz_filename = './tikz_gen/slides.tex'
     f = open(tikz_filename, 'w')

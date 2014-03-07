@@ -24,8 +24,9 @@ class sample_image:
             fout.write(x.uploadedfile.file.read())
             fout.close()
 
-            process.prepare_img(input_path, output_path)
-            web.last_upload = output_path
+            shapes = process.prepare_img(input_path, output_path)
+
+            web.last_upload = shapes
             print 'last_upload', web.last_upload
 
             return open(output_path).read()

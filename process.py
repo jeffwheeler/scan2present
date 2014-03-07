@@ -194,37 +194,34 @@ def process(img, g):
                             # linear_shapes.add((a, b), (c, d), extra=p)
                             linear_shapes.add((a, b), (c, d), p)
 
-    #Homography work
+    # Homography work
     recognize_linear_shapes(img, linear_shapes)
-
-
-    rectify_shapes(img, linear_shapes)
+    rectified_shapes = rectify_shapes(img, linear_shapes)
     
-    return img
+    return (img, rectified_shapes)
 
 def rectify_shapes(img, shapes):
- 
     largest=find_largest_container(img, shapes)
     if not largest:
         return None
     print largest.get_vertices()
-# Read the vertices
+    # Read the vertices
     (A2, B2) = largest.get_vertices()[0]
     (A1, B1) = largest.get_vertices()[1]
     (A0, B0) = largest.get_vertices()[2]
     (A3, B3) = largest.get_vertices()[3]
-# Arrange the vertices in top-left, bottom-left, bottom-right, top-right order
+    # Arrange the vertices in top-left, bottom-left, bottom-right, top-right order
     Dist0=A0*A0+B0*B0
     Dist1=A1*A1+B1*B1
     Dist2=A2*A2+B2*B2
     Dist3=A3*A3+B3*B3
 
-    minDist = 100000
+    minDist = 10000000
     maxDist = 0
     
-# Re-arranges the rectangle in required order
+    # Re-arranges the rectangle in required order
 
-#   Set top-left
+    # Set top-left
     if Dist0 < minDist:
         (x0, y0) = (A0, B0)
         minDist = Dist0
@@ -238,7 +235,7 @@ def rectify_shapes(img, shapes):
         (x0, y0) = (A3, B3)
         minDist = Dist3
 
-#   Set bottom-right
+    # Set bottom-right
     if Dist0 > maxDist:
         (x2, y2) = (A0, B0)
         maxDist = Dist0
@@ -252,7 +249,7 @@ def rectify_shapes(img, shapes):
         (x2, y2) = (A3, B3)
         maxDist = Dist3
         
-#   Set bottom-left
+    # Set bottom-left
     if B0>y0 and A0<x2:
         (x1, y1) = (A0, B0)  
     if B1>y0 and A1<x2:
@@ -262,7 +259,7 @@ def rectify_shapes(img, shapes):
     if B3>y0 and A3<x2:
         (x1, y1) = (A3, B3)
 
-#   Set top-right
+    # Set top-right
     if A0>x0 and B0<y2:
         (x3, y3) = (A0, B0)
     if A1>x0 and B1<y2:
@@ -274,17 +271,18 @@ def rectify_shapes(img, shapes):
 
     k0 = k1 = k2 = k3 = 0.5
 
-#   shuffle the character
+    # Shuffle the character
     (xtemp, ytemp) = (x3, y3)
     (x3, y3) = (x2, y2)
     (x2, y2) = (xtemp, ytemp)
 
-#   Modified Transformation
+    # Modified Transformation
     X0 = X1 = k0*x0 + k1*x1
     X2 = X3 = k2*x2 + k3*x3
     Y0 = Y2 = k0*y0 + k2*y2
     Y1 = Y3 = k1*y1 + k3*y3
-# Define the matrix as given in the paper
+
+    # Define the matrix as given in the paper
     R1 = [x0, y0, 1, 0, 0, 0, -X0*x0, -X0*y0]
     R2 = [0, 0, 0, x0, y0, 1, -Y0*x0, -Y0*y0]
     R3 = [x1, y1, 1, 0, 0, 0, -X1*x1, -X1*y1]
@@ -294,7 +292,6 @@ def rectify_shapes(img, shapes):
     R7 = [x3, y3, 1, 0, 0, 0, -X3*x3, -X3*y3]
     R8 = [0, 0, 0, x3, y3, 1, -Y3*x3, -Y3*y3]
 
-    
     g = np.matrix([R1, R2, R3, R4, R5, R6, R7, R8])
     v = np.matrix([[X0], [Y0], [X1], [Y1], [X2], [Y2], [X3], [Y3]])
     coeff = g.I*v 
@@ -309,7 +306,6 @@ def rectify_shapes(img, shapes):
 
     rectified_shapes = []
 
-#    rectified_shapes.append((1,2))
     for i, shape in enumerate(shapes):
         if shape.is_complete():
             new_shape = []
@@ -317,14 +313,12 @@ def rectify_shapes(img, shapes):
                 (xold, yold) = vertex
                 Xnew = ( A*xold + B*yold + C ) / (G*xold + H*yold + 1)
                 Ynew = ( D*xold + E*yold + F ) / (G*xold + H*yold + 1)
-                Xnorm = round((Xnew-X0)*(10/X3),3)
-                Ynorm = round((Ynew-Y0)*(8/Y3), 3)
+                Xnorm = round((Xnew-X0)*(10/(X3-X0)),3)
+                Ynorm = round((Ynew-Y0)*(8/(Y3-Y0)), 3)
                 new_shape.append((Xnorm,Ynorm))
             rectified_shapes.append(new_shape)
 
-
-    
-    print rectified_shapes
+    return rectified_shapes
 
 def prepare_img(input_path, output_path):
     img = cv2.imread(input_path)
@@ -333,11 +327,16 @@ def prepare_img(input_path, output_path):
     img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
     thresh = threshold(img)
     
-    img = process(img, thresh)
+    (img, rectified_shapes) = process(img, thresh)
+
     cv2.imwrite(output_path, img)
+
+    return rectified_shapes
 
 def test_img(filename):
     img = cv2.imread(filename)
+    # img = np.rot90(img, 3)
+    # img = cv2.resize(img, (0,0), fx=0.3, fy=0.3)
     img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
     thresh = threshold(img)
 
@@ -348,17 +347,18 @@ def test_img(filename):
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-##    test_img('input-images/training/square.jpg')
-##    test_img('input-images/slides/slide1.jpg')
-##    test_img('input-images/slides/slide2.jpg')
-##    test_img('input-images/slides/slide3.jpg')
-##    test_img('input-images/slides/slide4.jpg')
-##    test_img('input-images/slides/slide5.jpg')
-##    test_img('input-images/slides/slide6.jpg')
-##    test_img('input-images/slides/slide7.jpg')
-##    test_img('input-images/slides/slide8.jpg')
-##    test_img('input-images/slides/slide9.jpg')
-##    test_img('input-images/slides/slide10.jpg')
-##    test_img('input-images/slides/slide11.jpg')
-##    test_img('input-images/slides/slide12.jpg') # Need help on thresholding
-    test_img('input-images/slides/slide13.jpg')
+    test_img('input-images/uploaded/test715.jpg')
+    # test_img('input-images/training/square.jpg')
+    # test_img('input-images/slides/slide1.jpg')
+    # test_img('input-images/slides/slide2.jpg')
+    # test_img('input-images/slides/slide3.jpg')
+    # test_img('input-images/slides/slide4.jpg')
+    # test_img('input-images/slides/slide5.jpg')
+    # test_img('input-images/slides/slide6.jpg')
+    # test_img('input-images/slides/slide7.jpg')
+    # test_img('input-images/slides/slide8.jpg')
+    # test_img('input-images/slides/slide9.jpg')
+    # test_img('input-images/slides/slide10.jpg')
+    # test_img('input-images/slides/slide11.jpg')
+    # test_img('input-images/slides/slide12.jpg') # Need help on thresholding
+    # test_img('input-images/slides/slide13.jpg')
