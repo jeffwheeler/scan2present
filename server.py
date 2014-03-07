@@ -3,8 +3,8 @@ import web
 
 import process
 
-slides = []
-last_upload = None
+import tikz
+import email_pdf
 
 class index:
     def GET(self):
@@ -42,12 +42,29 @@ class save:
 
 class email_me:
     def GET(self):
-        pass
+        user_data = web.input()
+
+        if web.last_upload:
+            web.slides.append(web.last_upload)
+
+        print 'Generating PDFs'
+        tikz.build_pdf(web.slides)
+
+        print 'Sending to email address ', user_data.email
+        email_pdf.send_pdf(user_data.email)
+
+        # print 'Clearing'
+        web.slides = []
+        web.last_upload = None
+
+        return 'Emailed!'
+
 
 urls = (
     '/', 'index',
     '/sample_image', 'sample_image',
-    '/save', 'save'
+    '/save', 'save',
+    '/email', 'email_me'
 )
 
 if __name__ == '__main__':
