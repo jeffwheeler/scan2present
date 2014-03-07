@@ -314,7 +314,7 @@ def rectify_shapes(img, shapes):
                 Xnew = ( A*xold + B*yold + C ) / (G*xold + H*yold + 1)
                 Ynew = ( D*xold + E*yold + F ) / (G*xold + H*yold + 1)
                 Xnorm = round((Xnew-X0)*(10/(X3-X0)),3)
-                Ynorm = round((Ynew-Y0)*(8/(Y3-Y0)), 3)
+                Ynorm = 8-round((Ynew-Y0)*(8/(Y3-Y0)), 3)
                 new_shape.append((Xnorm,Ynorm))
             rectified_shapes.append(new_shape)
 
