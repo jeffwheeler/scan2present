@@ -4,6 +4,7 @@ import numpy as np
 
 from shape import ShapeList
 import rectify
+import geometry
 
 #The amount of dilation of the shapes
 th=7
@@ -11,12 +12,6 @@ BS=151
 BSHD=15
 kHD=0.13
 DSTCONNECT=30
-
-def distance(a, b):
-    (ax, ay) = a
-    (bx, by) = b
-
-    return np.sqrt((ax-bx)**2+(ay-by)**2)
 
 def threshold(img):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -38,7 +33,7 @@ def threshold_shape_sizes(shapes):
     # we've screwed up somewhere.
     for shape in shapes:
         for v1, v2 in itertools.combinations(shape.get_vertices(), 2):
-            if distance(v1, v2) < 10:
+            if geometry.distance(v1, v2) < 10:
                 shapes.delete_shape_with_vertex(v1)
                 break
 
@@ -82,6 +77,7 @@ def process(img, g):
     g[dst>0.02*dst.min()]=0
     
     line_endpoints = []
+    ellipses = []
 
     x = 0
 
@@ -122,6 +118,7 @@ def process(img, g):
                 # Circles
                 # cv2.drawContours(img, c, -1, (255, 0, 0), 1)
                 cv2.ellipse(img, ellipse, (0, 255, 255), 2)
+                ellipses.append(ellipse)
             else:
                 # Some weird line shape
                 #cv2.drawContours(img, c, -1, (255, 0, x), 2)
@@ -139,7 +136,7 @@ def process(img, g):
         for (c, d) in line_endpoints:
             if (a, b) != (c, d):
                 for (m, n) in itertools.combinations([a, b, c, d], 2):
-                    if distance(m, n) < DSTCONNECT:
+                    if geometry.distance(m, n) < DSTCONNECT:
                         # Likely found two line segments that should connect
                         
                         (x1, y1) = np.float32(a)
@@ -169,17 +166,19 @@ def process(img, g):
                         # extraordinarily unlikely, though.
 
                         p = tuple(np.int32((px_n/p_d, py_n/p_d)))
-                        if distance(m, p) < DSTCONNECT and distance(n, p) < DSTCONNECT:
+                        if geometry.distance(m, p) < DSTCONNECT and geometry.distance(n, p) < DSTCONNECT:
                             cv2.line(img, m, p, (0, 0, 255), 1)
                             cv2.line(img, n, p, (0, 0, 255), 1)
                             # linear_shapes.add((a, b), (c, d), extra=p)
                             linear_shapes.add((a, b), (c, d), p)
 
     # Homography work
+    print 'Ellipses', ellipses
+
     recognize_linear_shapes(img, linear_shapes)
-    rectified_shapes = rectify.rectify_shapes(img, linear_shapes)
+    rectified = rectify.rectify_shapes(img, linear_shapes, ellipses)
     
-    return (img, rectified_shapes)
+    return (img, rectified)
 
 def prepare_img(input_path, output_path):
     img = cv2.imread(input_path)
@@ -188,27 +187,30 @@ def prepare_img(input_path, output_path):
     img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
     thresh = threshold(img)
     
-    (img, rectified_shapes) = process(img, thresh)
+    (img, rectified) = process(img, thresh)
 
     cv2.imwrite(output_path, img)
 
-    return rectified_shapes
+    return rectified
 
 def test_img(filename):
     img = cv2.imread(filename)
-    # img = np.rot90(img, 3)
-    # img = cv2.resize(img, (0,0), fx=0.3, fy=0.3)
-    img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
+    img = np.rot90(img, 3)
+    img = cv2.resize(img, (0,0), fx=0.3, fy=0.3)
+    # img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
     thresh = threshold(img)
 
-    process(img, thresh)
+    (img, rectified) = process(img, thresh)
 
-    cv2.imshow(filename, img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow(filename, img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    import tikz
+    tikz.build_pdf([rectified])
 
 if __name__ == '__main__':
-    test_img('input-images/uploaded/test715.jpg')
+    test_img('input-images/uploaded/test400.jpg')
     # test_img('input-images/training/square.jpg')
     # test_img('input-images/slides/slide1.jpg')
     # test_img('input-images/slides/slide2.jpg')

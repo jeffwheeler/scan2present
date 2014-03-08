@@ -23,13 +23,23 @@ frame_footer = '''
 \\end{frame}
 '''
 
+ellipse_template = '''
+\\draw (%f, %f) circle [x radius=%f, y radius=%f, rotate=%f];
+'''
+
 def build_frame(shapes):
+    (linear_shapes, ellipses) = shapes
+
     s = frame_header
-    # s += '\path[draw] (0,0) -- (0,2.124) -- (10,8) -- cycle;'
-    for shape in shapes:
-        s += '\\path[draw] '
+    for shape in linear_shapes:
+        s += '\\draw '
         s += ' -- '.join(['(%f, %f)' % v for v in shape])
         s += ' -- cycle;\n'
+
+    for ellipse in ellipses:
+        (x, y), (xr, yr), angle = ellipse
+        s += ellipse_template % (x, y, xr, yr, angle)
+
     s += frame_footer
 
     return s

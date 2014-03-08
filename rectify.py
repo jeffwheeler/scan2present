@@ -1,6 +1,8 @@
 import itertools
 import numpy as np
 
+import geometry
+
 def find_largest_container(shapes):
     max_area = 0
     max_area_shape = None
@@ -19,6 +21,15 @@ def find_largest_container(shapes):
                 max_area_shape = shape
 
     return max_area_shape
+
+def apply_homography(M, v):
+    (A, B, C, D, E, F, G, H) = M.T.tolist()[0]
+    (x0, y0) = v
+
+    denom = G*x0 + H*y0 + 1
+    xp = (A*x0 + B*y0 + C)/denom
+    yp = (D*x0 + E*y0 + F)/denom
+    return (xp, yp)
 
 def reorder_quadrilater_vertices(vertices):
     # I think this assumes the quadrilateral is convex (but the bounding box
@@ -45,16 +56,14 @@ def reorder_quadrilater_vertices(vertices):
 
     return reordered
 
-def rectify_shapes(img, shapes):
+def rectify_shapes(img, shapes, ellipses):
     largest = find_largest_container(shapes)
 
     if not largest:
         return None
 
     # Order the vertices
-    vs = largest.get_vertices()
-
-    vs = reorder_quadrilater_vertices(vs)
+    vs = reorder_quadrilater_vertices(largest.get_vertices())
 
     (x0, y0) = vs[0]
     (x1, y1) = vs[1]
@@ -79,18 +88,30 @@ def rectify_shapes(img, shapes):
     v = np.matrix([X0, Y0, X1, Y1, X2, Y2, X3, Y3]).T
     M = g.I*v
 
-    (A, B, C, D, E, F, G, H) = M.T.tolist()[0]
-
     # Rebuild new shapes with rectified vertices
-    rectified_shapes = []
+    rectified_linear_shapes = []
     for shape in shapes:
         if shape.is_complete():
             new_shape = []
-            for (xorig, yorig) in shape.get_vertices():
-                denom = G*xorig + H*yorig + 1
-                xp = (A*xorig + B*yorig + C)/denom
-                yp = (D*xorig + E*yorig + F)/denom
-                new_shape.append((xp, yp))
-            rectified_shapes.append(new_shape)
+            for v in shape.get_vertices():
+                new_shape.append(apply_homography(M, v))
+            rectified_linear_shapes.append(new_shape)
 
-    return rectified_shapes
+    rectified_ellipses = []
+    for ellipse in ellipses:
+        c, (major_axis, minor_axis), angle = ellipse
+        print 'Axes', major_axis, minor_axis
+
+        # Assume the major_axis corresponds to the x radius, and the
+        # minor_axis corresponds to the y radius. Then, rotate to correct for
+        # the naive assumption.
+        # xr = apply_homography(M, (major_axis, 0))
+        # yr = apply_homography(M, (0, minor_axis))
+        xr = yr = 2
+
+        # print 'Radii', xr, yr
+
+        recte = (apply_homography(M, c), (xr, yr), angle)
+        rectified_ellipses.append(recte)
+
+    return (rectified_linear_shapes, rectified_ellipses)
