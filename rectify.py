@@ -14,7 +14,7 @@ def find_largest_container(shapes):
                      + vertices[2][0]*vertices[3][1] - vertices[2][1]*vertices[3][0]
                      + vertices[3][0]*vertices[0][1] - vertices[3][1]*vertices[0][0])
 
-            if area > maxarea:
+            if area > max_area:
                 max_area = area
                 max_area_shape = shape
 
@@ -63,8 +63,8 @@ def rectify_shapes(img, shapes):
 
     X0 = X1 = 0
     X2 = X3 = 10
-    Y0 = Y2 = 0
-    Y1 = Y3 = 8
+    Y0 = Y2 = 8
+    Y1 = Y3 = 0
 
     g = np.matrix([
         [x0, y0, 1, 0 , 0 , 0, -X0*x0, -X0*y0],
@@ -76,7 +76,7 @@ def rectify_shapes(img, shapes):
         [x3, y3, 1, 0 , 0 , 0, -X3*x3, -X3*y3],
         [0 , 0 , 0, x3, y3, 1, -Y3*x3, -Y3*y3]
     ])
-    v = np.transpose(np.matrix([X0, Y0, X1, Y1, X2, Y2, X3, Y3]))
+    v = np.matrix([X0, Y0, X1, Y1, X2, Y2, X3, Y3]).T
     M = g.I*v
 
     (A, B, C, D, E, F, G, H) = M.T.tolist()[0]
