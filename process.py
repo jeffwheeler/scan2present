@@ -70,12 +70,12 @@ def recognize_linear_shapes(img, shapes):
 
 def preview_detection(img, g):
     gf = np.float32(g)
-    
+
     dst = cv2.cornerHarris(gf,th+8,BSHD,kHD)
     dst = cv2.dilate(dst,None)
 
     g[dst>0.02*dst.min()]=0
-    
+
     line_endpoints = []
     ellipses = []
 
@@ -126,7 +126,7 @@ def preview_detection(img, g):
                 min_y = y + minor_axis/2*np.cos(np.radians(90+angle))
                 cv2.line(img, (int(x), int(y)), (int(maj_x), int(maj_y)), (255, 0, 0), 2)
                 cv2.line(img, (int(x), int(y)), (int(min_x), int(min_y)), (0, 255, 0), 2)
-                
+
                 e = ((x, y), (maj_x, maj_y), (min_x, min_y))
                 ellipses.append(e)
             else:
@@ -185,8 +185,9 @@ def preview_detection(img, g):
     return (linear_shapes, ellipses)
 
 def prepare_rectified(img, linear_shapes, ellipses):
-    rectified = rectify.rectify_shapes(img, linear_shapes, ellipses)
-    return (img, rectified)
+    (rect_lin_shapes, rect_ellipses) = rectify.rectify_shapes(img, linear_shapes, ellipses)
+    thresholded = rectify.threshold_shapes(15, rect_lin_shapes)
+    return (img, (thresholded, rect_ellipses))
 
 def prepare_img(input_path, output_path):
     img = cv2.imread(input_path)
@@ -194,7 +195,7 @@ def prepare_img(input_path, output_path):
 
     img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
     thresh = threshold(img)
-    
+
     shapes = preview_detection(img, thresh)
 
     cv2.imwrite(output_path, img)
