@@ -99,19 +99,23 @@ def rectify_shapes(img, shapes, ellipses):
 
     rectified_ellipses = []
     for ellipse in ellipses:
-        c, (major_axis, minor_axis), angle = ellipse
-        print 'Axes', major_axis, minor_axis
+        c, majp, minp = ellipse
 
-        # Assume the major_axis corresponds to the x radius, and the
-        # minor_axis corresponds to the y radius. Then, rotate to correct for
-        # the naive assumption.
-        # xr = apply_homography(M, (major_axis, 0))
-        # yr = apply_homography(M, (0, minor_axis))
-        xr = yr = 2
+        c_h    = apply_homography(M, c)
+        majp_h = apply_homography(M, majp)
+        minp_h = apply_homography(M, minp)
 
-        # print 'Radii', xr, yr
+        majlen = geometry.distance(c_h, majp_h)
+        minlen = geometry.distance(c_h, minp_h)
 
-        recte = (apply_homography(M, c), (xr, yr), angle)
+        theta = 0
+        dy = majp_h[1] - c_h[1]
+        dx = majp_h[0] - c_h[0]
+        if dx != 0:
+            theta = np.degrees(np.arctan(dy/dx))
+
+        recte = (c_h, (majlen, minlen), theta)
+        print recte
         rectified_ellipses.append(recte)
 
     return (rectified_linear_shapes, rectified_ellipses)

@@ -68,7 +68,7 @@ def recognize_linear_shapes(img, shapes):
         for i, v in enumerate(vs):
             cv2.line(img, v, vs[(i+1)%len(vs)], color, 2)
 
-def process(img, g):
+def preview_detection(img, g):
     gf = np.float32(g)
     
     dst = cv2.cornerHarris(gf,th+8,BSHD,kHD)
@@ -118,7 +118,17 @@ def process(img, g):
                 # Circles
                 # cv2.drawContours(img, c, -1, (255, 0, 0), 1)
                 cv2.ellipse(img, ellipse, (0, 255, 255), 2)
-                ellipses.append(ellipse)
+                # ellipses.append(ellipse)
+
+                maj_x = x + major_axis/2*np.sin(np.radians(angle))
+                maj_y = y + major_axis/2*np.cos(np.radians(angle))
+                min_x = x + minor_axis/2*np.sin(np.radians(90+angle))
+                min_y = y + minor_axis/2*np.cos(np.radians(90+angle))
+                cv2.line(img, (int(x), int(y)), (int(maj_x), int(maj_y)), (255, 0, 0), 2)
+                cv2.line(img, (int(x), int(y)), (int(min_x), int(min_y)), (0, 255, 0), 2)
+                
+                e = ((x, y), (maj_x, maj_y), (min_x, min_y))
+                ellipses.append(e)
             else:
                 # Some weird line shape
                 #cv2.drawContours(img, c, -1, (255, 0, x), 2)
@@ -138,7 +148,6 @@ def process(img, g):
                 for (m, n) in itertools.combinations([a, b, c, d], 2):
                     if geometry.distance(m, n) < DSTCONNECT:
                         # Likely found two line segments that should connect
-                        
                         (x1, y1) = np.float32(a)
                         (x2, y2) = np.float32(b)
                         (x3, y3) = np.float32(c)
@@ -164,7 +173,6 @@ def process(img, g):
                         # Should probably validate that there is an intersection
                         # before crashing here by division with zero. It is
                         # extraordinarily unlikely, though.
-
                         p = tuple(np.int32((px_n/p_d, py_n/p_d)))
                         if geometry.distance(m, p) < DSTCONNECT and geometry.distance(n, p) < DSTCONNECT:
                             cv2.line(img, m, p, (0, 0, 255), 1)
@@ -172,12 +180,12 @@ def process(img, g):
                             # linear_shapes.add((a, b), (c, d), extra=p)
                             linear_shapes.add((a, b), (c, d), p)
 
-    # Homography work
-    print 'Ellipses', ellipses
-
     recognize_linear_shapes(img, linear_shapes)
+
+    return (linear_shapes, ellipses)
+
+def prepare_rectified(img, linear_shapes, ellipses):
     rectified = rectify.rectify_shapes(img, linear_shapes, ellipses)
-    
     return (img, rectified)
 
 def prepare_img(input_path, output_path):
@@ -187,30 +195,48 @@ def prepare_img(input_path, output_path):
     img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
     thresh = threshold(img)
     
-    (img, rectified) = process(img, thresh)
+    shapes = preview_detection(img, thresh)
 
     cv2.imwrite(output_path, img)
 
-    return rectified
+    return shapes
 
-def test_img(filename):
+def test_img(filename, show=False):
     img = cv2.imread(filename)
     img = np.rot90(img, 3)
     img = cv2.resize(img, (0,0), fx=0.3, fy=0.3)
     # img = cv2.resize(img, (0,0), fx=0.2, fy=0.2)
     thresh = threshold(img)
 
-    (img, rectified) = process(img, thresh)
+    linear_shapes, ellipses = preview_detection(img, thresh)
+    img, rectified = prepare_rectified(img, linear_shapes, ellipses)
 
-    # cv2.imshow(filename, img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    print 'L=%d, E=%d' % (
+        len(filter(lambda s: s.is_complete(), linear_shapes)),
+        len(ellipses)
+    )
 
-    import tikz
-    tikz.build_pdf([rectified])
+    if show:
+        cv2.imshow(filename, img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    return rectified
+
+    # import tikz
+    # tikz.build_pdf([rectified])
 
 if __name__ == '__main__':
-    test_img('input-images/uploaded/test400.jpg')
+    slides = []
+    import os, tikz
+
+    for filename in os.listdir('./input-images/uploaded/'):
+        if '.jpg' in filename:
+            print filename
+            slides.append(test_img(os.path.join('.', 'input-images', 'uploaded', filename)))
+
+    tikz.build_pdf(slides)
+
     # test_img('input-images/training/square.jpg')
     # test_img('input-images/slides/slide1.jpg')
     # test_img('input-images/slides/slide2.jpg')

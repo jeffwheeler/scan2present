@@ -40,7 +40,7 @@ class Shape:
         return s1 in self.c[0][1] or s2 in self.c[0][1]
 
     def can_add(self, s1, s2, v):
-        if self.has_vertex(v):
+        if self.has_vertex(v) or self.is_complete():
             return False
         else:
             return self.has_segment(s1) or self.has_segment(s2)
@@ -96,7 +96,8 @@ class ShapeList:
                 if found_home:
                     # We need to merge the shape we just found with the one
                     # that we had found previously (stored in 'found_home')
-                    self.merge_shapes(found_home, shape)
+                    if not found_home.is_complete():
+                        self.merge_shapes(found_home, shape)
                 else:
                     shape.add(s1, s2, v)
                     found_home = shape
@@ -139,6 +140,9 @@ class ShapeList:
 
     def __iter__(self):
         return iter(self.shapes)
+
+    def __len__(self):
+        return len(self.shapes)
 
 if __name__ == '__main__':
     s1 = ((10, 45), (10, 15))

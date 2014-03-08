@@ -24,9 +24,9 @@ class sample_image:
             fout.write(x.uploadedfile.file.read())
             fout.close()
 
-            rectified = process.prepare_img(input_path, output_path)
+            shapes = process.prepare_img(input_path, output_path)
 
-            web.last_upload = rectified
+            web.last_upload = shapes
             print 'last_upload', web.last_upload
 
             return open(output_path).read()
@@ -48,8 +48,15 @@ class email_me:
         if web.last_upload:
             web.slides.append(web.last_upload)
 
+        print 'Rectifying'
+        rectified_slides = []
+        for (linear_shapes, ellipses) in web.slides:
+            img, rectified = \
+                process.prepare_rectified(None, linear_shapes, ellipses)
+            rectified_slides.append(rectified)
+
         print 'Generating PDFs'
-        tikz.build_pdf(web.slides)
+        tikz.build_pdf(rectified_slides)
 
         print 'Sending to email address ', user_data.email
         email_pdf.send_pdf(user_data.email)
