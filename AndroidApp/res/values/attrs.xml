@@ -1,0 +1,5 @@
+<resources>
+   <declare-styleable name="ResultView">
+       <attr name="filename" format="string" />
+   </declare-styleable>
+</resources>

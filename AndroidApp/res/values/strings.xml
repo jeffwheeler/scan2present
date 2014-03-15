@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Scan2Present</string>
+    <string name="results_view">The Results</string>
+    <string name="save_button">Save Slide</string>
+    <string name="submit_slides">Email me</string>
+    <string name="okay">Okay</string>
+
+</resources>
